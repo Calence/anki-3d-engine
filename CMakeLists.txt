@@ -1,4 +1,6 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+include(ProcessorCount)
 
 PROJECT(anki)
 
@@ -67,10 +69,12 @@ endif()
 # Configuration                                                                #
 ################################################################################
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(ANKI_EXTRA_CHECKS "Debugging checks (assertions)" OFF)
 option(ANKI_LTO "LTO compilation" OFF)
 
-option(ANKI_BUILD_TOOLS "Build tools" OFF)
+option(ANKI_BUILD_TOOLS "Build tools" ON)
 option(ANKI_BUILD_TESTS "Build unit tests" OFF)
 option(ANKI_BUILD_SANDBOX "Build sandbox application" ON)
 option(ANKI_BUILD_BENCH "Build benchmark application" OFF)
@@ -106,7 +110,7 @@ else()
 	message(FATAL_ERROR "Couldn't determine the window backend. You need to specify it manually")
 endif()
 
-set(ANKI_GR_BACKEND "GL" CACHE STRING "The graphics API (GL or VULKAN)")
+set(ANKI_GR_BACKEND "VULKAN" CACHE STRING "The graphics API (VULKAN or GL)")
 
 if(${ANKI_GR_BACKEND} STREQUAL "GL")
 	set(GL TRUE)
@@ -133,84 +137,65 @@ endif()
 # Compiler & linker flags                                                      #
 ################################################################################
 
-set(CXX_FLAGS "")
-set(COMPILER_FLAGS "")
-set(LINKER_FLAGS "")
-
-if(NOT MSVC)
-	if(ARCH_64)
-		add_definitions(-D_POSIX_VER_64)
-	else()
-		add_definitions(-D_POSIX_VER_32)
-	endif()
-endif()
-
 if(MINGW)
 	set(COMPILER_FLAGS "${COMPILER_FLAGS} -mconsole ")
 endif()
 
-add_definitions(-DGLEW_NO_GLU)
 add_definitions(-DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
 add_definitions(-DANKI_BUILD)
 
+# ImGUI
+add_definitions(-DIMGUI_USER_CONFIG=<anki/ui/ImGuiConfig.h>)
+
 if(NOT MSVC)
 	# When building AnKi define this special flag
-	set(COMPILER_FLAGS "${COMPILER_FLAGS} -fPIC ")
+	add_definitions("-fPIC")
 
-	if(NOT ANKI_CPU_ADDR_SPACE STREQUAL "0")
-		set(LINKER_FLAGS "${LINKER_FLAGS} -m${ANKI_CPU_ADDR_SPACE} ")
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -m${ANKI_CPU_ADDR_SPACE} ")
-	endif()
-
-	set(COMPILER_FLAGS "${COMPILER_FLAGS} -fno-exceptions ")
+	add_definitions("-fno-exceptions")
 
 	if(GCC AND NOT CLANG)
-		set(CXX_FLAGS "${CXX_FLAGS} -static-libstdc++ ")
+		add_definitions("-static-libstdc++")
 	endif()
 
 	if(LINUX OR MACOS OR WINDOWS)
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -msse4 ")
+		add_definitions("-msse4")
 	else()
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -mfpu=neon ")
+		add_definitions("-mfpu=neon")
 	endif()
 
 	if(ANKI_LTO)
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -flto ")
+		add_definitions("-flto ")
 		set(LINKER_FLAGS "${LINKER_FLAGS} -flto ")
 	endif()
 
 	if(ANKI_STRIP)
 		set(LINKER_FLAGS "${LINKER_FLAGS} -s ")
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -s ")
+		add_definitions("-s")
 	endif()
 
 	if(ANKI_ADDRESS_SANITIZER)
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -fsanitize=address ")
+		add_definitions("-fsanitize=address ")
 	endif()
 
 	if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -O3 -DNDEBUG ")
-
-		set(CMAKE_CXX_FLAGS_RELEASE "")
-		set(CMAKE_C_FLAGS_RELEASE "")
+		add_definitions("-O3 -DNDEBUG")
 	elseif(${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -O3 -g3 ")
-
-		set(CMAKE_CXX_FLAGS_RELWITHDBGINFO "")
-		set(CMAKE_C_FLAGS_RELWITHDBGINFO "")
+		add_definitions("-O3 -g3 -fno-omit-frame-pointer")
 	elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-		set(COMPILER_FLAGS "${COMPILER_FLAGS} -O0 -g3 ")
-
-		set(CMAKE_CXX_FLAGS_DEBUG "")
-		set(CMAKE_C_FLAGS_DEBUG "")
+		add_definitions("-O0 -g3")
 	else()
 		message(FATAL_ERROR "Wrong CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 	endif()
 
 	# Set the flags to cmake now
-	set(CMAKE_CXX_FLAGS "${CXX_FLAGS} ${COMPILER_FLAGS}")
-	set(CMAKE_C_FLAGS "${COMPILER_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LINKER_FLAGS}")
+else()
+	#ProcessorCount(PC)
+	#add_definitions("/MP${PC}")
+
+	if(${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+		#add_definitions("/Ox")
+	endif()
 endif()
 
 # Use gold linker
@@ -226,7 +211,7 @@ endif()
 ################################################################################
 # Thirdparty                                                                   #
 ################################################################################
-set(ANKI_EXTERN_SUB_DIRS tinyxml2 lua z bullet)
+set(ANKI_EXTERN_SUB_DIRS tinyxml2 lua z bullet imgui meshoptimizer)
 
 # Bullet config
 option(BUILD_BULLET2_DEMOS OFF)
@@ -241,8 +226,8 @@ endif()
 
 set(ANKI_EXTERN_SUB_DIRS ${ANKI_EXTERN_SUB_DIRS} SPIRV-Cross)
 
-if(ANKI_BUILD_TOOLS)
-	set(ANKI_EXTERN_SUB_DIRS ${ANKI_EXTERN_SUB_DIRS} assimp)
+if(VULKAN)
+	set(ANKI_EXTERN_SUB_DIRS ${ANKI_EXTERN_SUB_DIRS} volk)
 endif()
 
 # SDL
@@ -264,7 +249,7 @@ add_subdirectory(thirdparty/freetype)
 message("++ End configuring freetype")
 
 # glslang
-message("++ Configuring glslang")	
+message("++ Configuring glslang")
 add_subdirectory(thirdparty/glslang)
 message("++ End configuring glslang")
 
@@ -343,12 +328,13 @@ else()
 	set(ANKI_TESTS 0)
 endif()
 
-configure_file("src/anki/Config.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/anki/Config.h")
+configure_file("anki/Config.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/anki/Config.h")
 
 # Include & lib directories
-include_directories("src"
+include_directories(
 	"thirdparty/tinyxml2/include"
 	"thirdparty/lua"
+	"thirdparty/imgui"
 	"thirdparty/z"
 	"${SDL2_INCLUDE_DIRS}"
 	"thirdparty/freetype/include"
@@ -373,9 +359,12 @@ endif()
 
 # AnKi compiler flags (Mainly warnings)
 if(NOT MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -W -Wextra -Wstrict-aliasing -Wwrite-strings -Wunused -Wunused-variable -Wno-unused-parameter -Wundef -Wno-ignored-attributes -Wno-implicit-fallthrough -Wunused-result -std=c++14")
+	add_definitions("-pedantic -Wno-unknown-warning-option -Wall -W -Wextra -Wstrict-aliasing -Wwrite-strings -Wunused "
+		"-Wno-unused-parameter -Wundef -Wno-ignored-attributes -Wno-implicit-fallthrough -Wunused-result "
+		"-Wconversion -Wno-sign-conversion -Wno-keyword-macro -Wno-string-conversion -Wno-class-memaccess "
+		"-Wunused-variable -std=c++14")
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996 /wd4244 /wd4262 /wd4267")
+	add_definitions("/wd4996 /wd4244 /wd4262 /wd4267 /wd26495 /wd26439")
 endif()
 
 # Set platform specific
@@ -383,7 +372,7 @@ if(LINUX)
 	if(GL)
 		set(THIRD_PARTY_LIBS ${ANKI_GR_BACKEND} ankiglew)
 	else()
-		set(THIRD_PARTY_LIBS vulkan)
+		set(THIRD_PARTY_LIBS ankivolk)
 		if(SDL)
 			set(THIRD_PARTY_LIBS ${THIRD_PARTY_LIBS} X11-xcb)
 		else()
@@ -403,12 +392,7 @@ elseif(WINDOWS)
 	if(GL)
 		set(THIRD_PARTY_LIBS ${THIRD_PARTY_LIBS} ankiglew opengl32)
 	else()
-		if(NOT DEFINED ENV{VULKAN_SDK})
-			message(FATAL_ERROR "You need to have VULKAN SDK installed and the VULKAN_SDK env variable set")
-		endif()
-
-		link_directories($ENV{VULKAN_SDK}/Bin)
-		set(THIRD_PARTY_LIBS vulkan-1)
+		set(THIRD_PARTY_LIBS ${THIRD_PARTY_LIBS} ankivolk)
 	endif()
 
 	set(THIRD_PARTY_LIBS ${THIRD_PARTY_LIBS} version Imm32 Winmm DbgHelp)
@@ -420,17 +404,16 @@ if(SDL)
 	set(THIRD_PARTY_LIBS ${THIRD_PARTY_LIBS} SDL2-static)
 endif()
 
-set(THIRD_PARTY_LIBS ${THIRD_PARTY_LIBS} BulletSoftBody BulletDynamics BulletCollision LinearMath 
-	ankispirvcross ankitinyxml2 ankilua ankiz glslang SPIRV OGLCompiler OSDependent ankitinyexpr)
+set(THIRD_PARTY_LIBS ${THIRD_PARTY_LIBS} BulletSoftBody BulletDynamics BulletCollision LinearMath
+	ankispirvcross ankitinyxml2 ankilua ankimeshoptimizer ankiz glslang SPIRV OGLCompiler OSDependent ankitinyexpr
+	ankiimgui)
 
 # Add anki sub libraries
-set(ANKI_SUB_DIRS core script renderer scene ui input physics resource misc gr collision math util)
-foreach(TMP ${ANKI_SUB_DIRS})
-	add_subdirectory(src/anki/${TMP})
-endforeach()
+add_subdirectory(anki)
 
 separate_arguments(AK_SOURCES)
 add_library(anki ${AK_SOURCES})
+target_compile_definitions(anki PRIVATE -DANKI_SOURCE_FILE)
 target_link_libraries(anki ${THIRD_PARTY_LIBS})
 
 ################################################################################

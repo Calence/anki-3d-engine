@@ -1,0 +1,23 @@
+<serializer>
+	<includes>
+		<include file="&lt;anki/util/Array.h&gt;"/>
+	</includes>
+
+	<classes>
+		<class name="ClassB">
+			<members>
+				<member name="m_array" type="U8" array_size="3" />
+				<member name="m_darray" type="WeakArray&lt;U32&gt;" />
+			</members>
+		</class>
+
+		<class name="ClassA">
+			<members>
+				<member name="m_array" type="U8" array_size="2" />
+				<member name="m_u32" type="U32" />
+				<member name="m_u64" type="U64" />
+				<member name="m_darray" type="WeakArray&lt;ClassB&gt;" />
+			</members>
+		</class>
+	</classes>
+</serializer>

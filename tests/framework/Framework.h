@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -180,7 +180,9 @@ extern void deleteTesterSingleton();
 #define ANKI_TEST_EXPECT_NEAR_IMPL(file_, line_, func_, x, y, epsilon_) \
 	do \
 	{ \
-		if(absolute((x) - (y)) > (epsilon_)) \
+		auto maxVal = ((x) > (y)) ? (x) : (y); \
+		auto minVal = ((x) < (y)) ? (x) : (y); \
+		if((maxVal - minVal) > (epsilon_)) \
 		{ \
 			std::stringstream ss; \
 			ss << "FAILURE: " << #x << " != " << #y << " (" << file_ << ":" << line_ << ")"; \
@@ -219,13 +221,13 @@ extern void deleteTesterSingleton();
 /// Check error code.
 #define ANKI_TEST_EXPECT_ERR(x_, y_) ANKI_TEST_EXPECT_EQ_IMPL(__FILE__, __LINE__, __func__, x_, y_)
 
-void initConfig(Config& cfg);
+void initConfig(ConfigSet& cfg);
 
-NativeWindow* createWindow(const Config& cfg);
+NativeWindow* createWindow(const ConfigSet& cfg);
 
-GrManager* createGrManager(const Config& cfg, NativeWindow* win);
+GrManager* createGrManager(const ConfigSet& cfg, NativeWindow* win);
 
-ResourceManager* createResourceManager(
-	const Config& cfg, GrManager* gr, PhysicsWorld*& physics, ResourceFilesystem*& resourceFs);
+ResourceManager* createResourceManager(const ConfigSet& cfg, GrManager* gr, PhysicsWorld*& physics,
+									   ResourceFilesystem*& resourceFs);
 
 } // end namespace anki

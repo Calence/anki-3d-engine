@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -34,6 +34,6 @@ ANKI_TEST(Util, INotify)
 			ANKI_TEST_EXPECT_EQ(modified, true);
 		}
 
-		ANKI_TEST_EXPECT_NO_ERR(removeDirectory(dir));
+		ANKI_TEST_EXPECT_NO_ERR(removeDirectory(dir, alloc));
 	}
 }

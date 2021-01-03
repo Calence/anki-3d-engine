@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -89,8 +89,8 @@ public:
 			moveCount = 0;
 	}
 };
-}
-}
+} // namespace
+} // namespace anki
 
 ANKI_TEST(Util, SparseArray)
 {
@@ -149,16 +149,16 @@ ANKI_TEST(Util, SparseArray)
 		SparseArray<SAFoo, U32> arr;
 		std::vector<int> numbers;
 
-		srand(time(nullptr));
+		srand(U32(time(nullptr)));
 
 		// Insert random
 		for(U i = 0; i < MAX; ++i)
 		{
-			U num;
+			I32 num;
 			while(1)
 			{
 				num = rand();
-				if(std::find(numbers.begin(), numbers.end(), int(num)) == numbers.end())
+				if(std::find(numbers.begin(), numbers.end(), num) == numbers.end())
 				{
 					// Not found
 					ANKI_TEST_EXPECT_EQ(arr.find(num), arr.getEnd());
@@ -202,7 +202,7 @@ ANKI_TEST(Util, SparseArray)
 		const U MAX = 10000;
 		SparseArray<SAFoo, U64> arr;
 		using StlMap =
-			std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, HeapAllocator<std::pair<int, int>>>;
+			std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, HeapAllocator<std::pair<const int, int>>>;
 		StlMap map(10, std::hash<int>(), std::equal_to<int>(), alloc);
 
 		for(U i = 0; i < MAX; ++i)
@@ -211,7 +211,7 @@ ANKI_TEST(Util, SparseArray)
 
 			if(insert)
 			{
-				const I idx = rand();
+				const I32 idx = rand();
 
 				if(map.find(idx) != map.end())
 				{
@@ -249,7 +249,7 @@ ANKI_TEST(Util, SparseArray)
 				auto it = arr.getBegin();
 				while(it != arr.getEnd())
 				{
-					I key = it->m_x - 1;
+					I32 key = it->m_x - 1;
 
 					auto it2 = bMap.find(key);
 					ANKI_TEST_EXPECT_NEQ(it2, bMap.end());
@@ -274,7 +274,7 @@ static ANKI_DONT_INLINE void* allocAlignedAk(void* userData, void* ptr, PtrSize 
 {
 	if(ptr == nullptr)
 	{
-#if ANKI_OS == ANKI_OS_LINUX
+#if ANKI_OS_LINUX
 		akAllocSize += size;
 		akMaxAllocSize = max(akMaxAllocSize, akAllocSize);
 #endif
@@ -282,7 +282,7 @@ static ANKI_DONT_INLINE void* allocAlignedAk(void* userData, void* ptr, PtrSize 
 	}
 	else
 	{
-#if ANKI_OS == ANKI_OS_LINUX
+#if ANKI_OS_LINUX
 		PtrSize s = malloc_usable_size(ptr);
 		akAllocSize -= s;
 #endif
@@ -297,7 +297,7 @@ static ANKI_DONT_INLINE void* allocAlignedStl(void* userData, void* ptr, PtrSize
 {
 	if(ptr == nullptr)
 	{
-#if ANKI_OS == ANKI_OS_LINUX
+#if ANKI_OS_LINUX
 		stlAllocSize += size;
 		stlMaxAllocSize = max(stlMaxAllocSize, stlAllocSize);
 #endif
@@ -305,7 +305,7 @@ static ANKI_DONT_INLINE void* allocAlignedStl(void* userData, void* ptr, PtrSize
 	}
 	else
 	{
-#if ANKI_OS == ANKI_OS_LINUX
+#if ANKI_OS_LINUX
 		PtrSize s = malloc_usable_size(ptr);
 		stlAllocSize -= s;
 #endif
@@ -320,11 +320,12 @@ ANKI_TEST(Util, SparseArrayBench)
 	HeapAllocator<U8> allocStl(allocAlignedStl, nullptr);
 	HeapAllocator<U8> allocTml(allocAligned, nullptr);
 
-	using StlMap = std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, HeapAllocator<std::pair<int, int>>>;
+	using StlMap =
+		std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, HeapAllocator<std::pair<const int, int>>>;
 	StlMap stdMap(10, std::hash<int>(), std::equal_to<int>(), allocStl);
 
 	using AkMap = SparseArray<int, U32>;
-	AkMap akMap(256, log2(256), 0.90f);
+	AkMap akMap(256, U32(log2(256.0f)), 0.90f);
 
 	HighRezTimer timer;
 
@@ -406,10 +407,8 @@ ANKI_TEST(Util, SparseArrayBench)
 	// Mem usage
 	const I64 stlMemUsage = stlMaxAllocSize + sizeof(stdMap);
 	const I64 akMemUsage = akMaxAllocSize + sizeof(akMap);
-	ANKI_TEST_LOGI("Max mem usage: STL %lli AnKi %lli | %f%% (At any given time what was the max mem usage)",
-		stlMemUsage,
-		akMemUsage,
-		F64(stlMemUsage) / akMemUsage * 100.0);
+	ANKI_TEST_LOGI("Max mem usage: STL %li AnKi %li | %f%% (At any given time what was the max mem usage)", stlMemUsage,
+				   akMemUsage, F64(stlMemUsage) / F32(akMemUsage) * 100.0f);
 
 	// Deletes
 	{

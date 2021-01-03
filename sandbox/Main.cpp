@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -19,39 +19,38 @@ public:
 	Bool m_profile = false;
 
 	Error init(int argc, char* argv[]);
-	Error userMainLoop(Bool& quit) override;
+	Error userMainLoop(Bool& quit, Second elapsedTime) override;
 };
 
 MyApp* app = nullptr;
 
 Error MyApp::init(int argc, char* argv[])
 {
-	if(argc < 3)
+	if(argc < 2)
 	{
-		ANKI_LOGE("usage: %s /path/to/config.xml relative/path/to/scene.lua", argv[0]);
+		ANKI_LOGE("usage: %s relative/path/to/scene.lua [anki config options]", argv[0]);
 		return Error::USER_DATA;
 	}
 
 	// Config
-	Config config;
-	ANKI_CHECK(config.loadFromFile(argv[1]));
-	ANKI_CHECK(config.setFromCommandLineArguments(argc, argv));
-	// ANKI_CHECK(config.saveToFile(argv[1]));
+	ConfigSet config = DefaultConfigSet::get();
+	ANKI_CHECK(config.setFromCommandLineArguments(argc - 2, argv + 2));
 
 	// Init super class
 	ANKI_CHECK(App::init(config, allocAligned, nullptr));
 
 	// Other init
-	MainRenderer& renderer = getMainRenderer();
+	Renderer& renderer = getMainRenderer().getOffscreenRenderer();
 	ResourceManager& resources = getResourceManager();
 
-	renderer.getOffscreenRenderer().getVolumetric().setFogParticleColor(Vec3(1.0, 0.9, 0.9) * 0.009);
+	renderer.getVolumetricFog().setFogParticleColor(Vec3(1.0f, 0.9f, 0.9f));
+	renderer.getVolumetricFog().setParticleDensity(1.0f);
 
 	if(getenv("PROFILE"))
 	{
 		m_profile = true;
 		setTimerTick(0.0);
-		CoreTracerSingleton::get().m_enabled = true;
+		TracerSingleton::get().setEnabled(true);
 	}
 
 // Input
@@ -63,10 +62,10 @@ Error MyApp::init(int argc, char* argv[])
 
 	// Load scene
 	ScriptResourcePtr script;
-	ANKI_CHECK(resources.loadResource(argv[2], script));
+	ANKI_CHECK(resources.loadResource(argv[1], script));
 	ANKI_CHECK(getScriptManager().evalString(script->getSource()));
 
-	// ANKI_CHECK(renderer.getOffscreenRenderer().getFinalComposite().loadColorGradingTexture(
+	// ANKI_CHECK(renderer.getFinalComposite().loadColorGradingTexture(
 	//	"textures/color_gradient_luts/forge_lut.ankitex"));
 
 #if PLAYER
@@ -75,9 +74,9 @@ Error MyApp::init(int argc, char* argv[])
 
 	PlayerNode* pnode;
 	ANKI_CHECK(scene.newSceneNode<PlayerNode>(
-		"player", pnode, cam.getComponent<MoveComponent>().getLocalOrigin() - Vec4(0.0, 1.0, 0.0, 0.0)));
+		"player", pnode, cam.getFirstComponentOfType<MoveComponent>().getLocalOrigin() - Vec4(0.0, 1.0, 0.0, 0.0)));
 
-	cam.getComponent<MoveComponent>().setLocalTransform(
+	cam.getFirstComponentOfType<MoveComponent>().setLocalTransform(
 		Transform(Vec4(0.0, 0.0, 0.0, 0.0), Mat3x4::getIdentity(), 1.0));
 
 	pnode->addChild(&cam);
@@ -86,17 +85,16 @@ Error MyApp::init(int argc, char* argv[])
 	return Error::NONE;
 }
 
-Error MyApp::userMainLoop(Bool& quit)
+Error MyApp::userMainLoop(Bool& quit, Second elapsedTime)
 {
-	F32 dist = 0.1;
-	F32 ang = toRad(2.5);
-	F32 scale = 0.01;
-	F32 mouseSensivity = 9.0;
+	F32 ang = toRad(2.5f);
+	F32 scale = 0.01f;
+	F32 mouseSensivity = 9.0f;
 	quit = false;
 
 	SceneGraph& scene = getSceneGraph();
 	Input& in = getInput();
-	MainRenderer& renderer = getMainRenderer();
+	Renderer& renderer = getMainRenderer().getOffscreenRenderer();
 
 	if(in.getKey(KeyCode::ESCAPE))
 	{
@@ -105,22 +103,22 @@ Error MyApp::userMainLoop(Bool& quit)
 	}
 
 	// move the camera
-	static MoveComponent* mover = &scene.getActiveCameraNode().getComponent<MoveComponent>();
+	static MoveComponent* mover = &scene.getActiveCameraNode().getFirstComponentOfType<MoveComponent>();
 
 	if(in.getKey(KeyCode::_1))
 	{
-		mover = scene.getActiveCameraNode().tryGetComponent<MoveComponent>();
+		mover = scene.getActiveCameraNode().tryGetFirstComponentOfType<MoveComponent>();
 	}
 	if(in.getKey(KeyCode::_2))
 	{
-		mover = &scene.findSceneNode("Spot_004").getComponent<MoveComponent>();
+		mover = &scene.findSceneNode("Point.018_Orientation").getFirstComponentOfType<MoveComponent>();
 	}
 
 	if(in.getKey(KeyCode::L) == 1)
 	{
 		/*Vec3 origin = mover->getWorldTransform().getOrigin().xyz();
 		printf("%f %f %f\n", origin.x(), origin.y(), origin.z());*/
-		mover->setLocalOrigin(Vec4(81.169312, -2.309618, 17.088392, 0.0));
+		mover->setLocalOrigin(Vec4(81.169312f, -2.309618f, 17.088392f, 0.0f));
 		// mover->setLocalRotation(Mat3x4::getIdentity());
 	}
 
@@ -164,10 +162,22 @@ Error MyApp::userMainLoop(Bool& quit)
 
 	if(in.getKey(KeyCode::F12) == 1)
 	{
-		CoreTracerSingleton::get().m_enabled = !CoreTracerSingleton::get().m_enabled;
+		TracerSingleton::get().setEnabled(!TracerSingleton::get().getEnabled());
 	}
 
 #if !PLAYER
+	static F32 dist = 0.1f;
+	if(in.getMouseButton(MouseButton::SCROLL_UP) == 1)
+	{
+		dist += 0.1f;
+		dist = min(dist, 10.0f);
+	}
+	if(in.getMouseButton(MouseButton::SCROLL_DOWN) == 1)
+	{
+		dist -= 0.1f;
+		dist = max(dist, 0.1f);
+	}
+
 	if(in.getKey(KeyCode::UP))
 		mover->rotateLocalX(ang);
 	if(in.getKey(KeyCode::DOWN))
@@ -214,6 +224,28 @@ Error MyApp::userMainLoop(Bool& quit)
 		mover->rotateLocalX(ang * in.getMousePosition().y() * mouseSensivity);
 	}
 #endif
+
+	if(in.getKey(KeyCode::U) == 1)
+	{
+		renderer.setCurrentDebugRenderTarget((renderer.getCurrentDebugRenderTarget() == "SSGI") ? "" : "SSGI");
+	}
+
+	if(in.getKey(KeyCode::I) == 1)
+	{
+		renderer.setCurrentDebugRenderTarget((renderer.getCurrentDebugRenderTarget() == "SSR") ? "" : "SSR");
+	}
+
+	if(in.getKey(KeyCode::O) == 1)
+	{
+		renderer.setCurrentDebugRenderTarget((renderer.getCurrentDebugRenderTarget() == "SM_resolve") ? ""
+																									  : "SM_resolve");
+	}
+
+	if(in.getKey(KeyCode::H) == 1)
+	{
+		renderer.setCurrentDebugRenderTarget((renderer.getCurrentDebugRenderTarget() == "RtShadows") ? ""
+																									 : "RtShadows");
+	}
 
 	if(in.getEvent(InputEvent::WINDOW_CLOSED))
 	{

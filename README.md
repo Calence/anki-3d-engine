@@ -1,30 +1,28 @@
 [![AnKi logo](http://anki3d.org/wp-content/uploads/2015/11/logo_248.png)](http://anki3d.org)
 
-AnKi 3D engine is a Linux and Windows opensource game engine that runs on OpenGL 4.5 and Vulkan 1.0 (Experimental).
+AnKi 3D engine is a Linux and Windows opensource game engine that runs on Vulkan 1.1 and OpenGL 4.5 (now deprecated).
 
 [![Video](http://img.youtube.com/vi/va7nZ2EFR4c/0.jpg)](http://www.youtube.com/watch?v=va7nZ2EFR4c)
 
 1 License
 =========
 
-AnKi's license is BSD. This practically means that you can use the source or parts of the source on proprietary and non 
-proprietary products as long as you follow the conditions of the license.
+AnKi's license is `BSD`. This practically means that you can use the source or parts of the source on proprietary and
+non proprietary products as long as you follow the conditions of the license.
 
-See `LICENSE` file for more info.
+See the [LICENSE](LICENSE) file for more info.
 
 2 Building AnKi
 ===============
 
-| OS      | Master Branch Build Status                                                                                                                                    |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Linux   | [![Build Status Linux](https://travis-ci.org/godlikepanos/anki-3d-engine.svg?branch=master)](https://travis-ci.org/godlikepanos/anki-3d-engine)               | 
-| Windows | [![Build status Windows](https://ci.appveyor.com/api/projects/status/waij29m7o8ajjoqh?svg=true)](https://ci.appveyor.com/project/godlikepanos/anki-3d-engine) |
+Build Status, Linux and Windows
+[![Build Status](https://travis-ci.org/godlikepanos/anki-3d-engine.svg?branch=master)](https://travis-ci.org/godlikepanos/anki-3d-engine)
 
 To checkout the source including the submodules type:
 
 	git clone --recurse-submodules https://github.com/godlikepanos/anki-3d-engine.git anki
 
-AnKi's build system is using `CMake`. A great effort was made to ease the building process that's why the number of 
+AnKi's build system is using `CMake`. A great effort was made to ease the building process that's why the number of
 external dependencies are almost none.
 
 2.1 On Linux
@@ -32,10 +30,11 @@ external dependencies are almost none.
 
 Prerequisites:
 
-- Cmake 2.8 and up
-- GCC 5.0 and up or Clang 3.7 and up
+- Cmake 3.0 and up
+- GCC 5.0 and up or Clang 6.0 and up
 - libx11-dev installed
 - libxrandr-dev installed
+- libx11-xcb-dev installed
 - [Optional] libxinerama-dev if you want proper multi-monitor support
 
 To build the release version:
@@ -58,31 +57,51 @@ This will open an interface with all the available options.
 
 Prerequisites:
 
-- CMake 2.8 and up
-	- Make sure you add cmake.exe to your PATH environment variable (The installer asks, press yes)
-- MinGW-w64 5.0 and up
-	- MinGW has many variants. You need the POSIX version plus SEH (eg x86_64-posix-seh)
-	- Install to a path without spaces (eg C:/mingw-w64)
-	- Append the path where mingw's binaries are located (eg C:/mingw-w64/bin) to the PATH environment variable
+- Cmake 3.0 and up
+- VulkanSDK version 1.1.x and up
+	- Add an environment variable named `VULKAN_SDK` that points to the installation path of VulkanSDK
+- Python 3.0 and up
+	- Make sure that the python executable's location is in `PATH` environment variable
+- Microsoft Visual Studio 2017 and up
+	- Make sure that `Windows 10 SDK (xxx) for Desktop C++ [x86 and x64]` component is installed
 
 To build the release version open `PowerShell` and type:
 
 	$cd path/to/anki
 	$mkdir build
 	$cd build
-	$cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-	$mingw32-make
+	$cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_BUILD_TYPE=Release
+	$cmake --build . --config Release
 
-> NOTE: If you have a better way to build on Windows please let us know.
+Alternatively, recent Visual Studio versions support building CMake projects from inside the IDE:
+
+- Open Visual Studio
+- Choose the "open a local folder" option and open AnKi's root directory (where this README.md is located)
+- Visual Studio will automatically understand that AnKi is a CMake project and it will populate the CMake cache
+- Press "build all"
 
 3 Next steps
 ============
 
-Try to build with `samples` enabled (search for the `ANKI_BUILD_SAMPLES=ON` option in your CMake GUI) and try running 
-the sponza executable. Then you will be able to see sponza running in AnKi. All samples must run from within their 
+This code repository contains **4 sample projects** that are built by default (`ANKI_BUILD_SAMPLES` CMake option):
+
+- `sponza`: The Crytek's Sponza scene
+- `simple_scene`: A simple scene
+- `physics_playground`: A scene with programmer's art and some physics interactions
+- `skeletal_animation`: A simple scene with an animated skin
+
+You can try running them and interacting with them. To run sponza, for example, execute the binary from any working
 directory.
 
-	$cd path/to/anki/samples/sponza
+On Linux:
+
 	$./path/to/build/bin/sponza
 
-More samples will follow.
+On Windows just find the `sponza.exe` and execute it. It's preferable to run the samples from a terminal because that
+prints some information, including possible errors.
+
+4 Contributing
+==============
+
+There are no special rules if you want to contribute. Just create a PR. Read the code [style guide](docs/code_style.md)
+before that though.

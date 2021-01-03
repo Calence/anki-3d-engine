@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -12,15 +12,15 @@ using namespace anki;
 template<typename Vec>
 void operatorsSame()
 {
-	const U size = Vec::SIZE;
+	const U size = Vec::COMPONENT_COUNT;
 	using T = typename Vec::Scalar;
 
 	Vec a, b;
 	Array<T, size> add, sub, mul, div;
 	for(U i = 0; i < size; i++)
 	{
-		T v0 = T(i * 10) / 2 + 1;
-		T v1 = T(i * 1000) / 5.123 + 1;
+		T v0 = T(F64(i * 10) / 2.0 + 1.0);
+		T v1 = T(F64(i * 1000) / 5.123 + 1.0);
 
 		a[i] = v0;
 		b[i] = v1;
@@ -63,14 +63,14 @@ void operatorsSame()
 template<typename Vec>
 void dot()
 {
-	const U size = Vec::SIZE;
+	const U size = Vec::COMPONENT_COUNT;
 	using T = typename Vec::Scalar;
 	T res = 0;
 	Vec vec;
 
 	for(U i = 0; i < size; i++)
 	{
-		T x = i * 666 + 1;
+		T x = T(i * 666 + 1);
 
 		vec[i] = x;
 		res += x * x;
@@ -84,19 +84,19 @@ template<typename Vec>
 void length()
 {
 	using T = typename Vec::Scalar;
-	U size = Vec::SIZE;
+	U size = Vec::COMPONENT_COUNT;
 	Vec vec;
 	T res = 0;
 
 	for(U i = 0; i < size; i++)
 	{
-		T x = i * 666;
+		T x = T(i * 666);
 
 		vec[i] = x;
 		res += x * x;
 	}
 
-	res = sqrt(F64(res));
+	res = T(sqrt(F32(res)));
 	ANKI_TEST_EXPECT_EQ(vec.getLength(), res);
 
 	if(Vec::IS_INTEGER)
@@ -117,12 +117,13 @@ void length()
 template<typename Vec>
 void comparision()
 {
-	U size = Vec::SIZE;
+	U size = Vec::COMPONENT_COUNT;
+	using Scalar = typename Vec::Scalar;
 	Vec a, a1, b;
 
 	for(U i = 0; i < size; i++)
 	{
-		a[i] = i * 666;
+		a[i] = Scalar(i * 666);
 		a1[i] = a[i];
 		b[i] = a[i] + 1;
 	}
@@ -184,8 +185,8 @@ void matOperatorsSame()
 	Array<T, size> add, sub;
 	for(U i = 0; i < size; i++)
 	{
-		T v0 = T(i * 10) / 2;
-		T v1 = T(i * 1000) / 5.123;
+		T v0 = T(i * 10 / 2);
+		T v1 = T(F64(i * 1000) / 5.123);
 
 		a[i] = v0;
 		b[i] = v1;
@@ -220,7 +221,7 @@ Mat getNonEmptyMat(typename Mat::Scalar offset = 0)
 
 	for(U i = 0; i < Mat::SIZE; i++)
 	{
-		out[i] = i + offset;
+		out[i] = typename Mat::Scalar(i) + offset;
 	}
 
 	return out;
@@ -339,22 +340,8 @@ ANKI_TEST(Math, Mat4)
 		Mat4 a = getNonEmptyMat<Mat4>(0);
 		Mat4 b = getNonEmptyMat<Mat4>(1);
 		Mat4 c = a * b;
-		Mat4 d = Mat4(62.0,
-			68.0,
-			74.0,
-			80.0,
-			174.000,
-			196.000,
-			218.000,
-			240.000,
-			286.000,
-			324.000,
-			362.000,
-			400.000,
-			398.000,
-			452.000,
-			506.000,
-			560.000);
+		Mat4 d = Mat4(62.0, 68.0, 74.0, 80.0, 174.000, 196.000, 218.000, 240.000, 286.000, 324.000, 362.000, 400.000,
+					  398.000, 452.000, 506.000, 560.000);
 		ANKI_TEST_EXPECT_EQ(c, d);
 	}
 
@@ -376,8 +363,8 @@ ANKI_TEST(Math, Mat3x4)
 		Mat3x4 a = getNonEmptyMat<Mat3x4>(0);
 		Mat3x4 b = getNonEmptyMat<Mat3x4>(1);
 		Mat3x4 c = a.combineTransformations(b);
-		Mat3x4 d = Mat3x4(
-			23.000, 26.000, 29.000, 35.000, 83.000, 98.000, 113.000, 135.000, 143.000, 170.000, 197.000, 235.000);
+		Mat3x4 d = Mat3x4(23.000, 26.000, 29.000, 35.000, 83.000, 98.000, 113.000, 135.000, 143.000, 170.000, 197.000,
+						  235.000);
 		ANKI_TEST_EXPECT_EQ(c, d);
 	}
 

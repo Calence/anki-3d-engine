@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -105,11 +105,11 @@ ANKI_TEST(Util, HashMap)
 		// Insert random
 		for(U i = 0; i < MAX; ++i)
 		{
-			U num;
+			I32 num;
 			while(1)
 			{
 				num = rand();
-				if(std::find(numbers.begin(), numbers.end(), int(num)) == numbers.end())
+				if(std::find(numbers.begin(), numbers.end(), num) == numbers.end())
 				{
 					// Not found
 					ANKI_TEST_EXPECT_EQ(akMap.find(num), akMap.getEnd());
@@ -145,7 +145,7 @@ ANKI_TEST(Util, HashMap)
 		using AkMap = HashMap<int, int, Hasher>;
 		AkMap akMap(128, 32, 0.9f);
 		using StlMap =
-			std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, HeapAllocator<std::pair<int, int>>>;
+			std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, HeapAllocator<std::pair<const int, int>>>;
 		StlMap stdMap(10, std::hash<int>(), std::equal_to<int>(), alloc);
 
 		std::unordered_map<int, int> tmpMap;
@@ -153,11 +153,11 @@ ANKI_TEST(Util, HashMap)
 		HighRezTimer timer;
 
 		// Create a huge set
-		const U COUNT = 1024 * 1024 * 10;
+		const U32 COUNT = 1024 * 1024 * 10;
 		DynamicArrayAuto<int> vals(alloc);
 		vals.create(COUNT);
 
-		for(U i = 0; i < COUNT; ++i)
+		for(U32 i = 0; i < COUNT; ++i)
 		{
 			// Put unique keys
 			int v;
@@ -174,7 +174,7 @@ ANKI_TEST(Util, HashMap)
 		{
 			// Put the vals AnKi
 			timer.start();
-			for(U i = 0; i < COUNT; ++i)
+			for(U32 i = 0; i < COUNT; ++i)
 			{
 				akMap.emplace(alloc, vals[i], vals[i]);
 			}
@@ -183,7 +183,7 @@ ANKI_TEST(Util, HashMap)
 
 			// Put the vals STL
 			timer.start();
-			for(U i = 0; i < COUNT; ++i)
+			for(U32 i = 0; i < COUNT; ++i)
 			{
 				stdMap[vals[i]] = vals[i];
 			}
@@ -199,7 +199,7 @@ ANKI_TEST(Util, HashMap)
 
 			// Find values AnKi
 			timer.start();
-			for(U i = 0; i < COUNT; ++i)
+			for(U32 i = 0; i < COUNT; ++i)
 			{
 				auto it = akMap.find(vals[i]);
 				count += *it;
@@ -209,15 +209,14 @@ ANKI_TEST(Util, HashMap)
 
 			// Find values STL
 			timer.start();
-			for(U i = 0; i < COUNT; ++i)
+			for(U32 i = 0; i < COUNT; ++i)
 			{
 				count += stdMap[vals[i]];
 			}
 			timer.stop();
 			Second stlTime = timer.getElapsedTime();
 
-			ANKI_TEST_LOGI(
-				"Find bench: STL %f AnKi %f | %f%% (%lld)", stlTime, akTime, stlTime / akTime * 100.0, count);
+			ANKI_TEST_LOGI("Find bench: STL %f AnKi %f | %f%% (%ld)", stlTime, akTime, stlTime / akTime * 100.0, count);
 		}
 
 		// Delete
@@ -227,7 +226,7 @@ ANKI_TEST(Util, HashMap)
 
 			// Random delete AnKi
 			Second akTime = 0.0;
-			for(U i = 0; i < vals.getSize(); ++i)
+			for(U32 i = 0; i < vals.getSize(); ++i)
 			{
 				auto it = akMap.find(vals[i]);
 
@@ -239,7 +238,7 @@ ANKI_TEST(Util, HashMap)
 
 			// Random delete STL
 			Second stlTime = 0.0;
-			for(U i = 0; i < vals.getSize(); ++i)
+			for(U32 i = 0; i < vals.getSize(); ++i)
 			{
 				auto it = stdMap.find(vals[i]);
 

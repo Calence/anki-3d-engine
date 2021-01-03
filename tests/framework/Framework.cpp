@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -23,13 +23,13 @@ void Test::run()
 {
 	std::cout << "========\nRunning " << suite->name << " " << name << "\n========" << std::endl;
 
-#if ANKI_OS == ANKI_OS_LINUX
+#if ANKI_OS_LINUX
 	struct mallinfo a = mallinfo();
 #endif
 
 	callback(*this);
 
-#if ANKI_OS == ANKI_OS_LINUX
+#if ANKI_OS_LINUX
 	struct mallinfo b = mallinfo();
 
 	int diff = b.uordblks - a.uordblks;
@@ -208,35 +208,32 @@ int Tester::listTests()
 	return 0;
 }
 
-static Tester* testerInstance = nullptr;
+static Tester* g_testerInstance = nullptr;
 
 Tester& getTesterSingleton()
 {
-	return *(testerInstance ? testerInstance : (testerInstance = new Tester));
+	return *(g_testerInstance ? g_testerInstance : (g_testerInstance = new Tester));
 }
 
 void deleteTesterSingleton()
 {
-	if(testerInstance != nullptr)
-	{
-		delete testerInstance;
-	}
+	delete g_testerInstance;
 }
 
-void initConfig(Config& cfg)
+void initConfig(ConfigSet& cfg)
 {
 	cfg.set("width", 1920);
 	cfg.set("height", 1080);
-	cfg.set("rsrc.dataPaths", ".:..");
+	cfg.set("rsrc_dataPaths", ".:..");
 }
 
-NativeWindow* createWindow(const Config& cfg)
+NativeWindow* createWindow(const ConfigSet& cfg)
 {
 	HeapAllocator<U8> alloc(allocAligned, nullptr);
 
 	NativeWindowInitInfo inf;
-	inf.m_width = cfg.getNumber("width");
-	inf.m_height = cfg.getNumber("height");
+	inf.m_width = cfg.getNumberU32("width");
+	inf.m_height = cfg.getNumberU32("height");
 	inf.m_title = "AnKi unit tests";
 	NativeWindow* win = new NativeWindow();
 
@@ -245,7 +242,7 @@ NativeWindow* createWindow(const Config& cfg)
 	return win;
 }
 
-GrManager* createGrManager(const Config& cfg, NativeWindow* win)
+GrManager* createGrManager(const ConfigSet& cfg, NativeWindow* win)
 {
 	GrManagerInitInfo inf;
 	inf.m_allocCallback = allocAligned;
@@ -258,8 +255,8 @@ GrManager* createGrManager(const Config& cfg, NativeWindow* win)
 	return gr;
 }
 
-ResourceManager* createResourceManager(
-	const Config& cfg, GrManager* gr, PhysicsWorld*& physics, ResourceFilesystem*& resourceFs)
+ResourceManager* createResourceManager(const ConfigSet& cfg, GrManager* gr, PhysicsWorld*& physics,
+									   ResourceFilesystem*& resourceFs)
 {
 	HeapAllocator<U8> alloc(allocAligned, nullptr);
 

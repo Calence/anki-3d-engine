@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -154,12 +154,12 @@ ANKI_TEST(Util, ThreadPool)
 
 		for(U it = 0; it < ITERATIONS; ++it)
 		{
-			const U problemSize = max<U>(1, rand());
-			const U threadCount = max<U>(1, rand() % 128);
-			U totalCount = 0;
-			for(U tid = 0; tid < threadCount; ++tid)
+			const U32 problemSize = max<U32>(1, rand());
+			const U32 threadCount = max<U32>(1, rand() % 128);
+			U32 totalCount = 0;
+			for(U32 tid = 0; tid < threadCount; ++tid)
 			{
-				PtrSize start, end;
+				U32 start, end;
 				splitThreadedProblem(tid, threadCount, problemSize, start, end);
 
 				if(tid == 0)

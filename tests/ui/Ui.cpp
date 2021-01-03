@@ -1,10 +1,10 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
 
 #include <tests/framework/Framework.h>
-#include <anki/core/Config.h>
+#include <anki/core/ConfigSet.h>
 #include <anki/util/HighRezTimer.h>
 #include <anki/Ui.h>
 #include <anki/Input.h>
@@ -18,38 +18,49 @@ class Label : public UiImmediateModeBuilder
 public:
 	using UiImmediateModeBuilder::UiImmediateModeBuilder;
 
+	Bool m_windowInitialized = false;
+	U32 m_buttonClickCount = 0;
+
 	void build(CanvasPtr canvas) final
 	{
-		nk_context* ctx = &canvas->getNkContext();
+		Vec4 oldBackground = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+		ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 0.8f;
 
-		if(nk_begin(ctx,
-			   "Window name",
-			   nk_rect(10, 10, 200, 500),
-			   NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE))
+		ImGui::Begin("ImGui Demo", nullptr);
+
+		if(!m_windowInitialized)
 		{
-			nk_layout_row_dynamic(ctx, 30, 1);
-
-			canvas->pushFont(canvas->getDefaultFont(), 10);
-			nk_label(ctx, "Label0", NK_TEXT_ALIGN_LEFT);
-			canvas->popFont();
-
-			canvas->pushFont(canvas->getDefaultFont(), 60);
-			nk_label(ctx, "Label1", NK_TEXT_ALIGN_LEFT);
-			canvas->popFont();
+			ImGui::SetWindowPos(Vec2(20, 10));
+			ImGui::SetWindowSize(Vec2(200, 500));
+			m_windowInitialized = true;
 		}
 
-		nk_end(ctx);
+		ImGui::Text("Label default size");
+
+		canvas->pushFont(canvas->getDefaultFont(), 30);
+		ImGui::Text("Label size 30");
+		ImGui::PopFont();
+
+		m_buttonClickCount += ImGui::Button("Toggle");
+		if(m_buttonClickCount & 1)
+		{
+			ImGui::Button("Toggled");
+		}
+
+		ImGui::End();
+		ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = oldBackground;
 	}
 };
 
 ANKI_TEST(Ui, Ui)
 {
-	Config cfg;
+	ConfigSet cfg = DefaultConfigSet::get();
 	initConfig(cfg);
-	cfg.set("window.vsync", 1);
-	cfg.set("window.debugContext", 0);
+	cfg.set("gr_vsync", 1);
+	cfg.set("gr_debugContext", 0);
 	cfg.set("width", 1024);
 	cfg.set("height", 760);
+	cfg.set("rsrc_dataPaths", "engine_data");
 
 	NativeWindow* win = createWindow(cfg);
 	Input* in = new Input();
@@ -69,11 +80,10 @@ ANKI_TEST(Ui, Ui)
 
 	{
 		FontPtr font;
-		ANKI_TEST_EXPECT_NO_ERR(
-			ui->newInstance(font, "engine_data/UbuntuRegular.ttf", std::initializer_list<U32>{10, 20, 30, 60}));
+		ANKI_TEST_EXPECT_NO_ERR(ui->newInstance(font, "UbuntuRegular.ttf", std::initializer_list<U32>{10, 20, 30, 60}));
 
 		CanvasPtr canvas;
-		ANKI_TEST_EXPECT_NO_ERR(ui->newInstance(canvas, font, 30, win->getWidth(), win->getHeight()));
+		ANKI_TEST_EXPECT_NO_ERR(ui->newInstance(canvas, font, 20, win->getWidth(), win->getHeight()));
 
 		IntrusivePtr<Label> label;
 		ANKI_TEST_EXPECT_NO_ERR(ui->newInstance(label));
@@ -93,7 +103,6 @@ ANKI_TEST(Ui, Ui)
 
 			canvas->beginBuilding();
 			label->build(canvas);
-			canvas->endBuilding();
 
 			TexturePtr presentTex = gr->acquireNextPresentableTexture();
 			FramebufferPtr fb;
@@ -114,19 +123,15 @@ ANKI_TEST(Ui, Ui)
 			cinit.m_flags = CommandBufferFlag::GRAPHICS_WORK | CommandBufferFlag::SMALL_BATCH;
 			CommandBufferPtr cmdb = gr->newCommandBuffer(cinit);
 
-			cmdb->setTextureBarrier(presentTex,
-				TextureUsageBit::NONE,
-				TextureUsageBit::FRAMEBUFFER_ATTACHMENT_WRITE,
-				TextureSubresourceInfo());
+			cmdb->setTextureBarrier(presentTex, TextureUsageBit::NONE, TextureUsageBit::FRAMEBUFFER_ATTACHMENT_WRITE,
+									TextureSubresourceInfo());
 
 			cmdb->beginRenderPass(fb, {{TextureUsageBit::FRAMEBUFFER_ATTACHMENT_WRITE}}, {});
 			canvas->appendToCommandBuffer(cmdb);
 			cmdb->endRenderPass();
 
-			cmdb->setTextureBarrier(presentTex,
-				TextureUsageBit::FRAMEBUFFER_ATTACHMENT_WRITE,
-				TextureUsageBit::PRESENT,
-				TextureSubresourceInfo());
+			cmdb->setTextureBarrier(presentTex, TextureUsageBit::FRAMEBUFFER_ATTACHMENT_WRITE, TextureUsageBit::PRESENT,
+									TextureSubresourceInfo());
 
 			cmdb->flush();
 
@@ -134,7 +139,7 @@ ANKI_TEST(Ui, Ui)
 			stagingMem->endFrame();
 
 			timer.stop();
-			const F32 TICK = 1.0 / 30.0;
+			const F32 TICK = 1.0f / 30.0f;
 			if(timer.getElapsedTime() < TICK)
 			{
 				HighRezTimer::sleep(TICK - timer.getElapsedTime());

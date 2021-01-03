@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -16,6 +16,7 @@ public:
 		ScriptResourcePtr script;
 		ANKI_CHECK(getResourceManager().loadResource("assets/scene.lua", script));
 		ANKI_CHECK(getScriptManager().evalString(script->getSource()));
+
 		return Error::NONE;
 	}
 };

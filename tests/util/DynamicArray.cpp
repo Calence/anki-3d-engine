@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -99,7 +99,7 @@ ANKI_TEST(Util, DynamicArray)
 
 	// Fuzzy
 	{
-		srand(time(nullptr));
+		srand(U32(time(nullptr)));
 		HeapAllocator<U8> alloc(allocAligned, nullptr);
 		DynamicArrayAuto<DynamicArrayFoo> arr(alloc);
 
@@ -110,15 +110,15 @@ ANKI_TEST(Util, DynamicArray)
 		for(U i = 0; i < ITERATIONS; ++i)
 		{
 			const Bool grow = arr.getSize() > 0 && (rand() & 1);
-			PtrSize newSize;
+			U32 newSize;
 			U32 value = rand();
 			if(grow)
 			{
-				newSize = vec.size() * randRange(1.0, 4.0);
+				newSize = U32(vec.size()) * getRandomRange(1, 4);
 			}
 			else
 			{
-				newSize = vec.size() * randRange(0.0, 0.9);
+				newSize = U32(F32(vec.size()) * getRandomRange(0.0, 0.9));
 			}
 
 			vec.resize(newSize, value);
@@ -126,9 +126,9 @@ ANKI_TEST(Util, DynamicArray)
 
 			// Validate
 			ANKI_TEST_EXPECT_EQ(arr.getSize(), vec.size());
-			for(U i = 0; i < arr.getSize(); ++i)
+			for(U32 j = 0; j < arr.getSize(); ++j)
 			{
-				ANKI_TEST_EXPECT_EQ(arr[i].m_x, vec[i].m_x);
+				ANKI_TEST_EXPECT_EQ(arr[j].m_x, vec[j].m_x);
 			}
 
 			arr.validate();
@@ -137,8 +137,8 @@ ANKI_TEST(Util, DynamicArray)
 		arr = DynamicArrayAuto<DynamicArrayFoo>(alloc);
 		vec = std::vector<DynamicArrayFoo>();
 		ANKI_TEST_EXPECT_GT(destructorCount, 0);
-		ANKI_TEST_EXPECT_EQ(
-			constructor0Count + constructor1Count + constructor2Count + constructor3Count, destructorCount);
+		ANKI_TEST_EXPECT_EQ(constructor0Count + constructor1Count + constructor2Count + constructor3Count,
+							destructorCount);
 	}
 }
 
@@ -180,14 +180,14 @@ ANKI_TEST(Util, DynamicArrayEmplaceAt)
 	{
 		DynamicArrayAuto<DynamicArrayFoo> arr(alloc);
 
-		for(U i = 0; i < 10; ++i)
+		for(I32 i = 0; i < 10; ++i)
 		{
 			arr.emplaceBack(i);
 		}
 
 		arr.emplaceAt(arr.getBegin() + 4, 666);
 
-		for(I i = 0; i < 10 + 1; ++i)
+		for(I32 i = 0; i < 10 + 1; ++i)
 		{
 			if(i < 4)
 			{
@@ -206,7 +206,7 @@ ANKI_TEST(Util, DynamicArrayEmplaceAt)
 
 	// Fuzzy
 	{
-		srand(time(nullptr));
+		srand(U32(time(nullptr)));
 
 		DynamicArrayAuto<DynamicArrayFoo> arr(alloc);
 		std::vector<DynamicArrayFoo> vec;
@@ -214,8 +214,8 @@ ANKI_TEST(Util, DynamicArrayEmplaceAt)
 		const I ITERATIONS = 10000;
 		for(I i = 0; i < ITERATIONS; ++i)
 		{
-			I randNum = rand();
-			I op = rand() % 3;
+			I32 randNum = rand();
+			I32 op = rand() % 3;
 
 			switch(op)
 			{
@@ -243,7 +243,7 @@ ANKI_TEST(Util, DynamicArrayEmplaceAt)
 
 		// Check
 		ANKI_TEST_EXPECT_EQ(arr.getSize(), vec.size());
-		for(PtrSize i = 0; i < arr.getSize(); ++i)
+		for(U32 i = 0; i < arr.getSize(); ++i)
 		{
 			ANKI_TEST_EXPECT_EQ(arr[i].m_x, vec[i].m_x);
 		}
@@ -251,7 +251,7 @@ ANKI_TEST(Util, DynamicArrayEmplaceAt)
 		arr.destroy();
 		vec.resize(0);
 
-		ANKI_TEST_EXPECT_EQ(
-			constructor0Count + constructor1Count + constructor2Count + constructor3Count, destructorCount);
+		ANKI_TEST_EXPECT_EQ(constructor0Count + constructor1Count + constructor2Count + constructor3Count,
+							destructorCount);
 	}
 }

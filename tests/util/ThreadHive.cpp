@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -60,7 +60,7 @@ static void taskToWait(void* arg, U32 threadId, ThreadHive& hive, ThreadHiveSema
 
 ANKI_TEST(Util, ThreadHive)
 {
-	const U32 threadCount = 4;
+	const U32 threadCount = 32;
 	HeapAllocator<U8> alloc(allocAligned, nullptr);
 	ThreadHive hive(threadCount, alloc);
 
@@ -68,7 +68,7 @@ ANKI_TEST(Util, ThreadHive)
 	if(1)
 	{
 		ThreadHiveTestContext ctx;
-		ctx.m_countAtomic.set(0);
+		ctx.m_countAtomic.setNonAtomically(0);
 		const U INITIAL_TASK_COUNT = 100;
 
 		for(U i = 0; i < INITIAL_TASK_COUNT; ++i)
@@ -78,7 +78,7 @@ ANKI_TEST(Util, ThreadHive)
 
 		hive.waitAllTasks();
 
-		ANKI_TEST_EXPECT_EQ(ctx.m_countAtomic.get(), INITIAL_TASK_COUNT * 2);
+		ANKI_TEST_EXPECT_EQ(ctx.m_countAtomic.getNonAtomically(), INITIAL_TASK_COUNT * 2);
 	}
 
 	// Depedency tests
@@ -121,7 +121,7 @@ ANKI_TEST(Util, ThreadHive)
 
 		hive.waitAllTasks();
 
-		ANKI_TEST_EXPECT_EQ(ctx.m_countAtomic.get(), DEP_TASKS * 2 + 10);
+		ANKI_TEST_EXPECT_EQ(ctx.m_countAtomic.getNonAtomically(), DEP_TASKS * 2 + 10);
 	}
 
 	// Fuzzy test
@@ -165,7 +165,7 @@ ANKI_TEST(Util, ThreadHive)
 			hive.waitAllTasks();
 		}
 
-		ANKI_TEST_EXPECT_EQ(ctx.m_countAtomic.get(), number);
+		ANKI_TEST_EXPECT_EQ(ctx.m_countAtomic.getNonAtomically(), number);
 	}
 }
 
@@ -242,7 +242,7 @@ ANKI_TEST(Util, ThreadHiveBench)
 	auto timeC = HighRezTimer::getCurrentTime();
 
 	ANKI_TEST_LOGI("Total time %fms. Ground truth %fms", (timeB - timeA) * 1000.0, (timeC - timeB) * 1000.0);
-	ANKI_TEST_EXPECT_EQ(sum.get(), serialFib);
+	ANKI_TEST_EXPECT_EQ(sum.getNonAtomically(), serialFib);
 }
 
 } // end namespace anki

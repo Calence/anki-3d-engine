@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -19,6 +19,45 @@ end
 function onKilled(event, prevTime, crntTime)
 	logi(string.format("Will kill %s", event:getAssociatedSceneNodes():getAt(0):getName()))
 	event:getAssociatedSceneNodes():getAt(0):setMarkedForDeletion()
+	return 1
+end
+	)";
+	ScriptEvent* event;
+	ANKI_CHECK(node->getSceneGraph().getEventManager().newEvent(event, -1, 10.0, script));
+	event->addAssociatedSceneNode(node);
+
+	return Error::NONE;
+}
+
+static Error createFogVolumeFadeEvent(SceneNode* node)
+{
+	CString script = R"(
+density = 15
+radius = 3.5
+
+function update(event, prevTime, crntTime)
+	node = event:getAssociatedSceneNodes():getAt(0)
+	fogComponent = node:getFogDensityComponent()
+
+	dt = crntTime - prevTime
+	density = density - 4.0 * dt
+	radius = radius + 0.5 * dt
+
+	pos = node:getMoveComponent():getLocalOrigin()
+	pos:setY(pos:getY() - 1.1 * dt)
+	node:getMoveComponent():setLocalOrigin(pos)
+
+	if density <= 0.0 or radius <= 0.0 then
+		event:getAssociatedSceneNodes():getAt(0):setMarkedForDeletion()
+	else
+		fogComponent:setSphere(radius)
+		fogComponent:setDensity(density)
+	end
+
+	return 1
+end
+
+function onKilled(event, prevTime, crntTime)
 	return 1
 end
 	)";
@@ -63,7 +102,7 @@ class MyApp : public SampleApp
 {
 public:
 	Error sampleExtraInit() override;
-	Error userMainLoop(Bool& quit) override;
+	Error userMainLoop(Bool& quit, Second elapsedTime) override;
 };
 
 Error MyApp::sampleExtraInit()
@@ -76,12 +115,12 @@ Error MyApp::sampleExtraInit()
 	if(1)
 	{
 		SceneNode& cam = getSceneGraph().getActiveCameraNode();
-		cam.getComponent<MoveComponent>().setLocalTransform(
+		cam.getFirstComponentOfType<MoveComponent>().setLocalTransform(
 			Transform(Vec4(0.0, 0.0, 5.0, 0.0), Mat3x4::getIdentity(), 1.0));
 
 		PlayerNode* player;
 		ANKI_CHECK(getSceneGraph().newSceneNode("player", player, Vec4(0.0f, 2.5f, 0.0f, 0.0f)));
-		PlayerControllerComponent& pcomp = player->getComponent<PlayerControllerComponent>();
+		PlayerControllerComponent& pcomp = player->getFirstComponentOfType<PlayerControllerComponent>();
 		pcomp.getPhysicsPlayerController()->setMaterialMask(PhysicsMaterialBit::STATIC_GEOMETRY);
 
 		player->addChild(&cam);
@@ -90,17 +129,16 @@ Error MyApp::sampleExtraInit()
 	// Create a body component with joint
 	{
 		ModelNode* monkey;
-		ANKI_CHECK(
-			getSceneGraph().newSceneNode<ModelNode>("monkey_p2p", monkey, "assets/Suzannedynamic-material.ankimdl"));
+		ANKI_CHECK(getSceneGraph().newSceneNode<ModelNode>("monkey_p2p", monkey, "assets/Suzanne_dynamic.ankimdl"));
 
 		BodyNode* body;
 		ANKI_CHECK(getSceneGraph().newSceneNode<BodyNode>("bmonkey_p2p", body, "assets/Suzanne.ankicl"));
-		body->getComponent<BodyComponent>().setTransform(
+		body->getFirstComponentOfType<BodyComponent>().setTransform(
 			Transform(Vec4(-0.0f, 4.0f, -3.0f, 0.0f), Mat3x4::getIdentity(), 1.0f));
 
 		body->addChild(monkey);
 
-		body->getComponent<JointComponent>().newHingeJoint(Vec3(0.2f, 1.0f, 0.0f), Vec3(1, 0, 0));
+		body->getFirstComponentOfType<JointComponent>().newHingeJoint(Vec3(0.2f, 1.0f, 0.0f), Vec3(1, 0, 0));
 	}
 
 	// Create a chain
@@ -112,23 +150,22 @@ Error MyApp::sampleExtraInit()
 		{
 			ModelNode* monkey;
 			ANKI_CHECK(getSceneGraph().newSceneNode<ModelNode>(
-				StringAuto(getAllocator()).sprintf("monkey_chain%u", i).toCString(),
-				monkey,
-				"assets/Suzannedynamic-material.ankimdl"));
+				StringAuto(getAllocator()).sprintf("monkey_chain%u", i).toCString(), monkey,
+				"assets/Suzanne_dynamic.ankimdl"));
 
 			Transform trf(Vec4(-4.3f, 12.0f, -3.0f, 0.0f), Mat3x4::getIdentity(), 1.0f);
-			trf.getOrigin().y() -= i * 1.25f;
+			trf.getOrigin().y() -= F32(i) * 1.25f;
 			// trf.getOrigin().x() -= i * 0.25f;
 
-			// monkey->getComponent<MoveComponent>().setLocalTransform(trf);
+			// monkey->getFirstComponentOfType<MoveComponent>().setLocalTransform(trf);
 
 			BodyNode* body;
 			ANKI_CHECK(getSceneGraph().newSceneNode<BodyNode>(
 				StringAuto(getAllocator()).sprintf("bmonkey_chain%u", i).toCString(), body, "assets/Suzanne.ankicl"));
-			body->getComponent<BodyComponent>().setTransform(trf);
+			body->getFirstComponentOfType<BodyComponent>().setTransform(trf);
 
 			// Create joint
-			JointComponent& jointc = body->getComponent<JointComponent>();
+			JointComponent& jointc = body->getFirstComponentOfType<JointComponent>();
 			if(prevBody == nullptr)
 			{
 				jointc.newPoint2PointJoint(Vec3(0, 1, 0));
@@ -149,13 +186,13 @@ Error MyApp::sampleExtraInit()
 		TriggerNode* node;
 		ANKI_CHECK(getSceneGraph().newSceneNode("trigger", node, 1.8f));
 
-		node->getComponent<MoveComponent>().setLocalOrigin(Vec4(1.0f, 0.5f, 0.0f, 0.0f));
+		node->getFirstComponentOfType<MoveComponent>().setLocalOrigin(Vec4(1.0f, 0.5f, 0.0f, 0.0f));
 	}
 
 	return Error::NONE;
 }
 
-Error MyApp::userMainLoop(Bool& quit)
+Error MyApp::userMainLoop(Bool& quit, Second elapsedTime)
 {
 	// ANKI_CHECK(SampleApp::userMainLoop(quit));
 
@@ -189,7 +226,7 @@ Error MyApp::userMainLoop(Bool& quit)
 	if(getInput().getKey(KeyCode::R))
 	{
 		SceneNode& player = getSceneGraph().findSceneNode("player");
-		player.getComponent<PlayerControllerComponent>().moveToPosition(Vec4(0.0f, 2.0f, 0.0f, 0.0f));
+		player.getFirstComponentOfType<PlayerControllerComponent>().moveToPosition(Vec4(0.0f, 2.0f, 0.0f, 0.0f));
 	}
 
 	if(getInput().getMouseButton(MouseButton::LEFT) == 1)
@@ -198,21 +235,21 @@ Error MyApp::userMainLoop(Bool& quit)
 
 		static U instance = 0;
 
-		Transform camTrf = getSceneGraph().getActiveCameraNode().getComponent<MoveComponent>().getWorldTransform();
+		Transform camTrf =
+			getSceneGraph().getActiveCameraNode().getFirstComponentOfType<MoveComponent>().getWorldTransform();
 
 		ModelNode* monkey;
 		ANKI_CHECK(getSceneGraph().newSceneNode<ModelNode>(
-			StringAuto(getAllocator()).sprintf("monkey%u", instance++).toCString(),
-			monkey,
-			"assets/Suzannedynamic-material.ankimdl"));
-		// monkey->getComponent<MoveComponent>().setLocalTransform(camTrf);
+			StringAuto(getAllocator()).sprintf("monkey%u", instance++).toCString(), monkey,
+			"assets/Suzanne_dynamic.ankimdl"));
+		// monkey->getFirstComponentOfType<MoveComponent>().setLocalTransform(camTrf);
 
 		BodyNode* body;
 		ANKI_CHECK(getSceneGraph().newSceneNode<BodyNode>(
 			StringAuto(getAllocator()).sprintf("bmonkey%u", instance++).toCString(), body, "assets/Suzanne.ankicl"));
-		body->getComponent<BodyComponent>().setTransform(camTrf);
+		body->getFirstComponentOfType<BodyComponent>().setTransform(camTrf);
 
-		PhysicsBodyPtr pbody = body->getComponent<BodyComponent>().getPhysicsBody();
+		PhysicsBodyPtr pbody = body->getFirstComponentOfType<BodyComponent>().getPhysicsBody();
 		pbody->applyForce(camTrf.getRotation().getZAxis().xyz() * -1500.0f, Vec3(0.0f, 0.0f, 0.0f));
 
 		body->addChild(monkey);
@@ -223,7 +260,8 @@ Error MyApp::userMainLoop(Bool& quit)
 
 	if(getInput().getMouseButton(MouseButton::RIGHT) == 1)
 	{
-		Transform camTrf = getSceneGraph().getActiveCameraNode().getComponent<MoveComponent>().getWorldTransform();
+		Transform camTrf =
+			getSceneGraph().getActiveCameraNode().getFirstComponentOfType<MoveComponent>().getWorldTransform();
 		Vec3 from = camTrf.getOrigin().xyz();
 		Vec3 to = from + -camTrf.getRotation().getZAxis() * 100.0f;
 
@@ -251,30 +289,49 @@ Error MyApp::userMainLoop(Bool& quit)
 			static U id = 0;
 			ModelNode* monkey;
 			ANKI_CHECK(getSceneGraph().newSceneNode(
-				StringAuto(getSceneGraph().getFrameAllocator()).sprintf("decal%u", id++).toCString(),
-				monkey,
-				"assets/Suzannedynamic-material.ankimdl"));
-			monkey->getComponent<MoveComponent>().setLocalTransform(trf);
+				StringAuto(getSceneGraph().getFrameAllocator()).sprintf("decal%u", id++).toCString(), monkey,
+				"assets/Suzanne_dynamic.ankimdl"));
+			monkey->getFirstComponentOfType<MoveComponent>().setLocalTransform(trf);
 
 			createDestructionEvent(monkey);
 
+#if 1
 			// Create some particles
 			ParticleEmitterNode* particles;
 			ANKI_CHECK(getSceneGraph().newSceneNode(
-				StringAuto(getSceneGraph().getFrameAllocator()).sprintf("parts%u", id++).toCString(),
-				particles,
+				StringAuto(getSceneGraph().getFrameAllocator()).sprintf("parts%u", id++).toCString(), particles,
 				"assets/smoke.ankipart"));
-			particles->getComponent<MoveComponent>().setLocalTransform(trf);
+			particles->getFirstComponentOfType<MoveComponent>().setLocalTransform(trf);
 			createDestructionEvent(particles);
+#endif
+
+			// Create some fog volumes
+			for(U i = 0; i < 1; ++i)
+			{
+				static int id = 0;
+				StringAuto name(getSceneGraph().getFrameAllocator());
+				name.sprintf("fog%u", id++);
+
+				FogDensityNode* fogNode;
+				ANKI_CHECK(getSceneGraph().newSceneNode(name.toCString(), fogNode));
+				FogDensityComponent& fogComp = fogNode->getFirstComponentOfType<FogDensityComponent>();
+				fogComp.setSphere(2.1f);
+				fogComp.setDensity(15.0f);
+
+				fogNode->getFirstComponentOfType<MoveComponent>().setLocalTransform(trf);
+
+				createDestructionEvent(fogNode);
+				createFogVolumeFadeEvent(fogNode);
+			}
 		}
 	}
 
 	if(0)
 	{
 		SceneNode& node = getSceneGraph().findSceneNode("trigger");
-		TriggerComponent& comp = node.getComponent<TriggerComponent>();
+		TriggerComponent& comp = node.getFirstComponentOfType<TriggerComponent>();
 
-		for(U i = 0; i < comp.getContactSceneNodes().getSize(); ++i)
+		for(U32 i = 0; i < comp.getContactSceneNodes().getSize(); ++i)
 		{
 			ANKI_LOGI("Touching %s", comp.getContactSceneNodes()[i]->getName().cstr());
 		}
@@ -288,7 +345,7 @@ int main(int argc, char* argv[])
 	Error err = Error::NONE;
 
 	MyApp* app = new MyApp;
-	err = app->init(argc, argv, argv[0]);
+	err = app->init(argc, argv, "physics_playground");
 	if(!err)
 	{
 		err = app->mainLoop();

@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -30,8 +30,7 @@ struct Deleter
 struct Foo2: public Object<Foo2, Allocator<Foo2>,
 	Deleter<Foo2, Allocator<Foo2>>>
 {
-	typedef Object<Foo2, Allocator<Foo2>,
-		Deleter<Foo2, Allocator<Foo2>>> Base;
+	using Base = Object<Foo2, Allocator<Foo2>, Deleter<Foo2, Allocator<Foo2>>>;
 
 	int x = 666;
 	static int constructorCallCount;

@@ -1,9 +1,9 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
 
-#include <anki/gr/common/StackGpuAllocator.h>
+#include <anki/gr/utils/StackGpuAllocator.h>
 #include <anki/util/ThreadHive.h>
 #include <tests/framework/Framework.h>
 #include <algorithm>
@@ -80,7 +80,7 @@ static void doAllocation(void* arg, U32 threadId, ThreadHive& hive, ThreadHiveSe
 	TestContext* ctx = static_cast<TestContext*>(arg);
 
 	U allocCount = ctx->m_allocCount.fetchAdd(1);
-	PtrSize allocSize = randRange(MIN_ALLOCATION_SIZE, MAX_ALLOCATION_SIZE);
+	PtrSize allocSize = getRandomRange(MIN_ALLOCATION_SIZE, MAX_ALLOCATION_SIZE);
 	ctx->m_allocs[allocCount].m_size = allocSize;
 	ANKI_TEST_EXPECT_NO_ERR(ctx->m_salloc->allocate(allocSize, ctx->m_allocs[allocCount].m_handle));
 }

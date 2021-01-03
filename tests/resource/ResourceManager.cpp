@@ -1,4 +1,4 @@
-// Copyright (C) 2009-2018, Panagiotis Christopoulos Charitos and contributors.
+// Copyright (C) 2009-2020, Panagiotis Christopoulos Charitos and contributors.
 // All rights reserved.
 // Code licensed under the BSD License.
 // http://www.anki3d.org/LICENSE
@@ -6,7 +6,7 @@
 #include "tests/framework/Framework.h"
 #include "anki/resource/DummyResource.h"
 #include "anki/resource/ResourceManager.h"
-#include "anki/core/Config.h"
+#include "anki/core/ConfigSet.h"
 
 namespace anki
 {
@@ -14,7 +14,7 @@ namespace anki
 ANKI_TEST(Resource, ResourceManager)
 {
 	// Create
-	Config config;
+	ConfigSet config = DefaultConfigSet::get();
 
 	HeapAllocator<U8> alloc(allocAligned, nullptr);
 
